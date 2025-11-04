@@ -1,0 +1,7 @@
+CMakeFiles/
+CMakeCache.txt
+code
+bptree.dat
+*.o
+*.out
+
