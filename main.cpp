@@ -202,37 +202,46 @@ public:
 
     void find(const char* key, vector<int>& results) {
         results.clear();
+
+        // Find the leftmost leaf that might contain the key
+        int leaf_pos = root_pos;
         Node node = read_node(root_pos);
 
-        // Navigate to the leaf node
         while (!node.is_leaf) {
             int i = 0;
+            // Find the child to descend to
             while (i < node.count && strcmp(key, node.keys[i].key) >= 0) {
                 i++;
             }
-            node = read_node(node.children[i]);
+            leaf_pos = node.children[i];
+            node = read_node(leaf_pos);
         }
 
-        // Scan leaf nodes
-        while (true) {
+        // Scan leaf nodes from left to right
+        while (leaf_pos != -1) {
+            node = read_node(leaf_pos);
+
             for (int i = 0; i < node.count; i++) {
                 int cmp = strcmp(node.keys[i].key, key);
                 if (cmp == 0) {
                     results.push_back(node.keys[i].value);
                 } else if (cmp > 0) {
+                    // Keys are sorted, so we're done
                     sort(results.begin(), results.end());
                     return;
                 }
             }
 
+            // Move to next leaf if we found matches or haven't reached the key yet
             if (node.next_leaf == -1) break;
 
-            // Check if we should continue to next leaf
+            // Check if next leaf might have the key
             Node next = read_node(node.next_leaf);
             if (next.count > 0 && strcmp(next.keys[0].key, key) > 0) {
                 break;
             }
-            node = next;
+
+            leaf_pos = node.next_leaf;
         }
 
         sort(results.begin(), results.end());
@@ -245,33 +254,26 @@ public:
     }
 
     void remove_from_leaf(const KeyValue& kv) {
+        // Find the leftmost leaf that might contain the key
+        int leaf_pos = root_pos;
         Node node = read_node(root_pos);
 
-        // Navigate to the leaf node
         while (!node.is_leaf) {
             int i = 0;
-            while (i < node.count && kv < node.keys[i]) {
-                i--;
+            // Find the child to descend to
+            // In B+ tree, internal nodes have keys that are copies of leaf keys
+            // We go right if kv >= node.keys[i]
+            while (i < node.count && !(kv < node.keys[i])) {
+                i++;
             }
-            i++;
-            node = read_node(node.children[i]);
-        }
-
-        // Find the starting leaf
-        int leaf_pos = root_pos;
-        node = read_node(root_pos);
-        while (!node.is_leaf) {
-            int i = 0;
-            while (i < node.count && kv < node.keys[i]) {
-                i--;
-            }
-            i++;
             leaf_pos = node.children[i];
             node = read_node(leaf_pos);
         }
 
-        // Search in leaf nodes
-        while (true) {
+        // Search in leaf nodes from left to right
+        while (leaf_pos != -1) {
+            node = read_node(leaf_pos);
+
             for (int i = 0; i < node.count; i++) {
                 if (node.keys[i] == kv) {
                     // Found it, remove
@@ -283,13 +285,20 @@ public:
                     return;
                 }
                 if (kv < node.keys[i]) {
-                    return; // Not found
+                    return; // Not found, keys are sorted
                 }
             }
 
+            // Move to next leaf
             if (node.next_leaf == -1) break;
+
+            // Check if next leaf might have the key
+            Node next = read_node(node.next_leaf);
+            if (next.count > 0 && kv < next.keys[0]) {
+                break; // Key would be before next leaf's first key
+            }
+
             leaf_pos = node.next_leaf;
-            node = read_node(leaf_pos);
         }
     }
 };
