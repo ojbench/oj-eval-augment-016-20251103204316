@@ -288,16 +288,19 @@ public:
                 }
             }
 
-            // Move to next leaf
+            // If current node is empty or we've checked all keys, check next leaf
             if (node.next_leaf == -1) break;
 
-            // Check if next leaf might have the key
-            Node next = read_node(node.next_leaf);
-            if (next.count > 0 && kv < next.keys[0]) {
-                break; // Key would be before next leaf's first key
+            // Peek at next leaf to see if we should continue
+            int next_pos = node.next_leaf;
+            Node next = read_node(next_pos);
+
+            // If next leaf is empty or its first key is greater than what we're looking for, stop
+            if (next.count == 0 || kv < next.keys[0]) {
+                break;
             }
 
-            leaf_pos = node.next_leaf;
+            leaf_pos = next_pos;
         }
     }
 };
