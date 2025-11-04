@@ -66,14 +66,12 @@ private:
     void write_node(int pos, const Node& node) {
         file.seekp(sizeof(int) * 2 + pos * sizeof(Node));
         file.write((char*)&node, sizeof(Node));
-        file.flush();
     }
 
     void write_header() {
         file.seekp(0);
         file.write((char*)&root_pos, sizeof(int));
         file.write((char*)&node_count, sizeof(int));
-        file.flush();
     }
 
     void read_header() {
@@ -176,6 +174,7 @@ public:
 
     ~BPlusTree() {
         write_header();
+        file.flush();
         file.close();
     }
 
